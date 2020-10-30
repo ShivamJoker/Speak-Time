@@ -1,50 +1,61 @@
 const timeEl = document.querySelector("time");
+const speakBtn = document.querySelector("button");
 const audioEl = document.querySelector("audio");
-const speakBtn = document.querySelector("#speakBtn");
 
 let date, min, hr, ampm;
 
 const updateTime = () => {
   date = new Date();
   min = date.getMinutes();
-  const hr24 = date.getHours();
 
+  const hr24 = date.getHours();
   hr = hr24 % 12 || 12;
   ampm = hr24 < 12 || hr24 === 24 ? "AM" : "PM";
 
   const timeStr = `${hr}:${min < 10 ? 0 : ""}${min} ${ampm}`;
-  timeEl.innerHTML = timeStr;
+  timeEl.innerText = timeStr;
 };
+setTimeout(() => {
+  /** Update time in first minute */
+  updateTime();
+  setInterval(() => {
+    updateTime();
+  }, 60 * 1000);
+}, (60 - new Date().getSeconds()) * 1000);
+
+updateTime();
+
+let isFinishedSpeaking = false,
+  isOSaid = false,
+  isMin10Said = false,
+  isMin1Said = false,
+  isHrSaid = false,
+  isMinBelow20Said = false,
+  isEvenAdded = false;
 
 const speakTime = () => {
-  let isFinishedSpeaking = false;
-  let isOSaid = false;
-  let isMinTenSaid = false;
-  let minOneSaid = false;
-  let hrSaid = false;
-  let isMinBelow20Said = false;
-
-  const playAudio = () => {
-    const playPromise = audioEl.play();
-  };
   const addSrc = (num) => {
     audioEl.src = `./numbers/${num}.mp3`;
-    playAudio();
+    const isPlayed = audioEl.play();
+    audioEl.playbackRate = 1.2;
   };
 
   /** will be called when audio is playing finished so that we can play another audio */
   const audioEnd = () => {
+    console.log("audio end called ", isHrSaid);
+
+    if (isFinishedSpeaking) {
+      return;
+    }
     /** hr will always be b/w 1 - 12 so its already pre recorded */
-    if (!hrSaid) {
+    if (!isHrSaid) {
       addSrc(hr);
-      hrSaid = true;
+      isHrSaid = true;
       return;
     }
 
-    if (min === 0 || isFinishedSpeaking) {
-      if (min === 0 && !isFinishedSpeaking) {
-        addSrc(ampm);
-      }
+    if (min === 0) {
+      addSrc(ampm);
       isFinishedSpeaking = true;
       return;
     }
@@ -54,43 +65,77 @@ const speakTime = () => {
       isOSaid = true;
       return;
     }
-
     /** if minute is b/w 1 - 20 say it directly no complications */
-    if (min < 21 && !isMinBelow20Said) {
-      console.log("Min is 1 to 20");
+    if (min <= 20 && !isMinBelow20Said) {
       addSrc(min);
       isMinBelow20Said = true;
-      isMinTenSaid = true;
       return;
     }
 
-    if (min > 20 && !isMinTenSaid) {
-      const minTen = min.toString().split("")[0];
-      //   console.log(`${minTen}0`);
-      addSrc(`${minTen}0`);
-      isMinTenSaid = true;
+    if (min > 20 && !isMin10Said) {
+      const min10 = min.toString().split("")[0];
+      addSrc(`${min10}0`);
+      isMin10Said = true;
       return;
     }
-
     /** dont run if minute is 30 40 50 */
-    if (min > 20 && !minOneSaid && min.toString().split("")[1] !== "0") {
-      const minFirst = min.toString().split("")[1];
-      addSrc(minFirst);
-      minOneSaid = true;
+    if (!isMin1Said && min > 20 && min.toString().split("")[1] !== "0") {
+      const min1 = min.toString().split("")[1];
+      addSrc(min1);
+      isMin1Said = true;
       return;
     }
-
+    /** Play its sound first */
     addSrc(ampm);
     isFinishedSpeaking = true;
   };
-  audioEl.addEventListener("ended", audioEnd);
-  /** Play its sound first */
+
+  /** Add even listener only once */
+  if (!isEvenAdded) {
+    audioEl.addEventListener("ended", audioEnd);
+    isEvenAdded = true;
+  }
   addSrc("its");
 };
 
-speakBtn.addEventListener("click", speakTime);
+speakBtn.addEventListener("click", () => {
+  isFinishedSpeaking = false;
+  isOSaid = false;
+  isMin10Said = false;
+  isHrSaid = false;
+  isMinBelow20Said = false;
+  isMin1Said = false;
 
-updateTime();
-setInterval(() => {
-  updateTime();
-}, (60 - new Date().getSeconds()) * 1000);
+  speakTime();
+});
+
+/** Preload audios */
+const audioList = [
+  "1.mp3",
+  "10.mp3",
+  "11.mp3",
+  "12.mp3",
+  "13.mp3",
+  "14.mp3",
+  "15.mp3",
+  "16.mp3",
+  "17.mp3",
+  "18.mp3",
+  "19.mp3",
+  "2.mp3",
+  "20.mp3",
+  "3.mp3",
+  "30.mp3",
+  "4.mp3",
+  "40.mp3",
+  "5.mp3",
+  "50.mp3",
+  "6.mp3",
+  "7.mp3",
+  "8.mp3",
+  "9.mp3",
+  "am.mp3",
+  "its.mp3",
+  "o.mp3",
+  "pm.mp3",
+];
